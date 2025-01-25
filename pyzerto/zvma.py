@@ -1078,7 +1078,7 @@ class zvmsite:
         return self.make_api_request("POST", uri, json_data=json_payload, headers=self.apiheader)
 
 
-    def vpg_fot_stop(self, vpgidentifier=None, fotsuccess=True, fotsummary="PyZerto initiated Test")
+    def vpg_fot_stop(self, vpgidentifier=None, fotsuccess=True, fotsummary="PyZerto initiated Test") -> List[str]:
 
         if vpgidentifier is None:
             self.log.error("Vpg identifier is required for vpg_for_stop function.")

@@ -1056,6 +1056,46 @@ class zvmsite:
         uri = self.construct_url(f"v1/vpgs/entitytypes", params)
         return self.make_api_request("GET", uri, headers=self.apiheader)
 
+    def vpg_fot_start(self, vpgidentifier=None, checkpointidentifier=None) -> List[str]:
+
+        if vpgidentifier is None:
+            self.log.error("Vpg identifier is required for vpg_for_start function.")
+            raise ValueError("vpgidentifier is required.")
+        
+        if checkpointidentifier is None:
+            self.log.error("Checkpooint identifier is required for vpg_for_start function.")
+            raise ValueError("checkpointidentifier is required.")
+        
+        # Construct the JSON payload
+        json_payload = {}
+        
+        if vpgidentifier is not None:
+            json_payload["checkpointid"] = checkpointidentifier
+
+        params = {}
+
+        uri = self.construct_url(f"v1/vpgs/{checkpointidentifier}/failovertest", params)
+        return self.make_api_request("POST", uri, json_data=json_payload, headers=self.apiheader)
+
+
+    def vpg_fot_stop(self, vpgidentifier=None, fotsuccess=True, fotsummary="PyZerto initiated Test")
+
+        if vpgidentifier is None:
+            self.log.error("Vpg identifier is required for vpg_for_stop function.")
+            raise ValueError("vpgidentifier is required.")
+        
+        
+        # Construct the JSON payload
+        json_payload = {}
+        
+        json_payload["failovertestsuccess"] = fotsuccess
+        json_payload["failovertestsummary"] = fotsummary
+
+        params = {}
+
+        uri = self.construct_url(f"v1/vpgs/{checkpointidentifier}/failoverteststop", params)
+        return self.make_api_request("POST", uri, json_data=json_payload, headers=self.apiheader)
+
     def vpg_statuses(self) -> List[str]:
 
         params = {}

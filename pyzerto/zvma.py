@@ -1074,7 +1074,7 @@ class zvmsite:
 
         params = {}
 
-        uri = self.construct_url(f"v1/vpgs/{vpgidentifieridentifier}/failovertest", params)
+        uri = self.construct_url(f"v1/vpgs/{vpgidentifier}/failovertest", params)
         return self.make_api_request("POST", uri, json_data=json_payload, headers=self.apiheader)
 
 
@@ -1093,7 +1093,7 @@ class zvmsite:
 
         params = {}
 
-        uri = self.construct_url(f"v1/vpgs/{vpgidentifieridentifier}/failoverteststop", params)
+        uri = self.construct_url(f"v1/vpgs/{vpgidentifier}/failoverteststop", params)
         return self.make_api_request("POST", uri, json_data=json_payload, headers=self.apiheader)
 
     def vpg_statuses(self) -> List[str]:

@@ -1678,7 +1678,6 @@ class zvmsite:
         uri = self.construct_url(f"v1/vpgs/{vpgidentifier}/failovertest", params)
         return self.make_api_request("POST", uri, json_data=json_payload, headers=self.apiheader)
 
-
     def vpg_fot_stop(self, vpgidentifier=None, fotsuccess=True, fotsummary="PyZerto initiated Test") -> List[str]:
         """
         Stop a failover test for a specific VPG.

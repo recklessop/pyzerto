@@ -17,13 +17,13 @@ from dateutil import parser
 from typing import List, Dict, Tuple, Union, Any, Optional
 from requests.structures import CaseInsensitiveDict
 from logging.handlers import RotatingFileHandler
-#from posthog import Posthog
+from posthog import Posthog
 import uuid
 from requests import Request, Session
 from .version import VERSION
 
 class zvmsite:
-    def __init__(self, host, username=None, password=None, port: int = 443, verify_ssl: bool = False, client_id="zerto-client", client_secret=None, grant_type="password", loglevel="debug", logger=None, stats: bool = True) -> None:
+    def __init__(self, host, username=None, password=None, port: int = 443, verify_ssl: bool = False, client_id="zerto-client", client_secret=None, grant_type="password", loglevel="debug", logger=None, analytics: bool = True) -> None:
         """
         Initialize a ZVM site object.
 
@@ -38,9 +38,10 @@ class zvmsite:
             grant_type (str, optional): The grant type for authentication. Defaults to "password".
             loglevel (str, optional): Logging level. Defaults to "debug".
             logger (logging.Logger, optional): An existing logger instance. Defaults to None.
-            stats (bool, optional): Whether to enable PostHog stats. Defaults to True.
+            analytics (bool, optional): Whether to enable PostHog analytics. Defaults to True.
         """
-        self.stats = stats
+
+        self.analytics = analytics
         self.host = host
         self.port = port
         self.username = username
@@ -69,7 +70,7 @@ class zvmsite:
 
         self.zvm_version = dict(full=None, major=None, minor=None, update=None, patch=None)
 
-        self.__user_agent_string__ = f"zerto_python_sdk_jpaul"
+        self.__user_agent_string__ = f"pyzerto_sdk_jpaul"
 
         self.apiheader = CaseInsensitiveDict()
         self.apiheader["Accept"] = "application/json"
@@ -91,10 +92,10 @@ class zvmsite:
         self.uuid = self.load_or_generate_uuid()
 
         # Posthog stats setup
-        #if self.stats:
-        #    self.setup_posthog()
-        #    self.posthog.capture(self.uuid, 'ZVMA10 Python Module Loaded')
-        #    self.log.debug("Sent PostHog Hook")
+        if self.analytics:
+            self.setup_posthog()
+            self.posthog.capture(self.uuid, 'ZVMA10 Python Module Loaded')
+            self.log.debug("Sent PostHog Hook")
 
     def __authhandler__(self) -> None:
         """
@@ -166,13 +167,25 @@ class zvmsite:
     def setup_logging(self) -> None:
         """
         Set up logging for the ZVM site object.
-
-        Creates a rotating file handler and sets up log formatting.
+        Creates the logs directory if it doesn't exist, then creates a rotating file handler and sets up log formatting.
         """
         container_id = str(socket.gethostname())
         log_formatter = logging.Formatter("%(asctime)s;%(levelname)s;%(threadName)s;%(message)s", "%Y-%m-%d %H:%M:%S")
-        log_handler = RotatingFileHandler(filename=f"./logs/Log-{container_id}.log", maxBytes=1024*1024*100, backupCount=5)
+
+        # Define the logs directory
+        logs_dir = "./logs"
+
+        # Check if the logs directory exists, if not, create it
+        if not os.path.exists(logs_dir):
+            os.makedirs(logs_dir)
+
+        # Construct the full path for the log file
+        log_file_path = os.path.join(logs_dir, f"Log-{container_id}.log")
+
+        # Create the rotating file handler with the full path
+        log_handler = RotatingFileHandler(filename=log_file_path, maxBytes=1024*1024*100, backupCount=5)
         log_handler.setFormatter(log_formatter)
+
         self.log = logging.getLogger("ZVM10 Module")
         self.log.setLevel(self.LOGLEVEL)
         self.log.addHandler(log_handler)
@@ -219,10 +232,18 @@ class zvmsite:
             file.write(new_uuid)
         return new_uuid
 
-    #def setup_posthog(self)  -> None:
-    #    self.posthog = Posthog(project_api_key='phc_HflqUkx9majhzm8DZva8pTwXFRnOn99onA9xPpK5HaQ', host='https://posthog.jpaul.io')
-    #    self.posthog.debug = True
-    #    self.posthog.identify(distinct_id=self.uuid)
+    def setup_posthog(self)  -> None:
+        self.posthog = Posthog('phc_mWeiO8cIr3b1fQT98SUyiGCa3WwbecXjgez4gLHdfSb', host='https://us.i.posthog.com')
+        self.posthog.debug = True
+        #properties = {
+        #    'site_type': self.site_type,
+        #    'site_type_version': self.site_type_version,
+        #    'zvm_version': self.zvm_version,
+        #    'sdk_version': self.__version__,
+        #    'verify_ssl': self.verify_ssl, 
+        #    'grant_type': self.grant_type
+        #}
+        #self.posthog.identify(distinct_id=self.uuid, properties=properties)
 
     def construct_url(self, path="", params=None) -> str:
         """
@@ -317,21 +338,19 @@ class zvmsite:
             self.log.debug(f'API Request: {method} - {url}')
 
             # Posthog stats setup
-            #if self.stats:
-            #    temp_base, temp_path = self.deconstruct_url(url)
-            #    self.posthog.capture( self.uuid, 'API REQUEST',
-            #    {
-            #        "url": temp_base,
-            #        "port": self.port,
-            #        "endpoint": temp_path,
-            #        "method": method,
-            #        "response_time_ms": int(elapsed_time_ms),
-            #        "verify_ssl": self.verify_ssl, 
-            #        "grant_type": self.grant_type,
-            #        "status_code": str(response.status_code),
-            #        "sdk_version": self.__version__
-            #    })
-            #    self.log.debug("Sent PostHog Hook")
+            if self.analytics:
+                temp_base, temp_path = self.deconstruct_url(url)
+                self.posthog.capture( self.uuid, 'API REQUEST',
+                {
+                    "url": temp_base,
+                    "port": self.port,
+                    "endpoint": temp_path,
+                    "method": method,
+                    "response_time_ms": int(elapsed_time_ms),
+                    "status_code": str(response.status_code),
+                    "verify_ssl": self.verify_ssl
+                })
+                self.log.debug("Sent PostHog Hook")
 
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -353,6 +372,27 @@ class zvmsite:
             self.log.info(f"Starting authentication thread {self.__auththread__.ident}")
         else:
             self.log.info("Already connected to the ZVM")
+
+        start_time = time.time()
+        while not self.__connected__:
+            if time.time() - start_time > 10:
+                print("Timeout: Connection not established within 10 seconds")
+                break
+            time.sleep(0.1)
+
+        self.version()
+
+        # if analytics are enabled make posthog call
+        if self.analytics:
+            properties = {
+                'site_type': self.site_type,
+                'site_type_version': self.site_type_version,
+                'zvm_version': self.zvm_version,
+                'sdk_version': self.__version__,
+                'verify_ssl': self.verify_ssl, 
+                'grant_type': self.grant_type
+            }
+            self.posthog.identify(distinct_id=self.uuid, properties=properties)
 
     def disconnect(self) -> None:
         """
